@@ -1,4 +1,6 @@
 import numpy as np
+import network
+import environment as env
 
 
 def create_board(board_len):
@@ -98,6 +100,57 @@ def availability_mask(board):
                 mask[i][j] = 0
 
     return mask
+
+
+def pva(player_symbol='X', brain_path=None, board_len=3):
+
+    environ = env.Environment(board_len)
+
+    model = network.MiniTTT(board_len)
+    if brain_path is not None:
+        model.load_brain(path=brain_path)
+
+    if player_symbol == 'X':
+        model_symbol = 'O'
+    else:
+        model_symbol = 'X'
+
+    winner = 'N'
+    turn = 'X'
+
+    obs = environ.board
+
+    while winner == 'N':
+
+        if turn == player_symbol:
+            y, x = input("Enter row, column: ").split()
+            move = (int(y), int(x))
+        else:
+            move = model.decide(obs, 0)
+
+
+        obs, reward, info = environ.step(turn, move)
+        winner = info
+
+        if turn == 'X':
+            turn = 'O'
+        else:
+            turn = 'X'
+
+        # Temporary render:
+        print(environ.board)
+        print('=======================')
+
+
+
+
+
+
+    
+
+
+
+
 
 
 

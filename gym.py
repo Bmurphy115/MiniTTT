@@ -3,10 +3,13 @@ import environment as env
 import network
 
 # Hyperparameters
-game_count = 1000
+game_count = 50000
 board_len = 3
-games_per_update_opponent = 5
-games_per_render = 100
+games_per_update_opponent = 100
+games_per_render = 10000
+epsilon = 0.9
+epsilon_decay = 0.9997
+
 
 training_environment = env.Environment(board_len)
 
@@ -28,9 +31,10 @@ for game_nr in range(game_count):
     while winner == 'N':
 
         if turn == 'X':
-            move = x_player.decide(obs)
+            move = x_player.decide(obs, epsilon)
+
         else:
-            move = o_player.decide(obs)
+            move = o_player.decide(obs, epsilon)
 
         obs, reward, info = training_environment.step(turn, move)
 
@@ -41,6 +45,11 @@ for game_nr in range(game_count):
         else:
             turn = 'X'
 
+    epsilon *= epsilon_decay
+
+    # Logs:
+    print(f'Game {game_nr + 1}, epsilon: {epsilon}')
+
     if (game_nr + 1) % games_per_render == 0:
         training_environment.render(training_environment.board)
 
@@ -48,5 +57,12 @@ for game_nr in range(game_count):
         opponent.load_brain(model)
 
     if winner != 'T':
-        model.train(training_environment.board_history[model.symbol], winner == model.symbol, 0.8)
+        model.train(training_environment.board_history[model.symbol], training_environment.move_history[model.symbol], winner == model.symbol, 0.8)
+
+
+model.save_brain(name='brain50k')
+
+
+
+
 

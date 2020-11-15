@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
 import game_mechanics as gm
+import random
 
 
 class Brain(nn.Module):
@@ -39,25 +40,41 @@ class MiniTTT:
         self.board_len = board_len
         self.symbol = None
 
-        self.optimizer = optim.Adam(self.brain.parameters(), lr=0.001)
+        self.optimizer = optim.Adam(self.brain.parameters(), lr=0.0001)
         self.loss = nn.CrossEntropyLoss()
 
-    def decide(self, board):
+    def decide(self, board, epsilon):
 
-        probabilities = self.brain(board).detach().numpy()[0]
+        random_select = (random.random() < epsilon)
+        
+        if random_select == False:
+            probabilities = self.brain(board).detach().numpy()[0]
+            mask = gm.availability_mask(board)
+            mask = mask.flatten()
+            probabilities *= mask
+            move = np.unravel_index(np.argmax(probabilities), (self.board_len, self.board_len))
 
-        mask = gm.availability_mask(board)
-        mask = mask.flatten()
-        probabilities *= mask
+        else:
+            available_moves = gm.available_moves(board)
+            move = random.choice(available_moves)
 
-        move = np.unravel_index(np.argmax(probabilities), (self.board_len, self.board_len))
         return move
 
-    def load_brain(self, subject):
-        self.brain.load_state_dict(subject.brain.state_dict())
+    def load_brain(self, subject=None, path=None):
+        if path is not None:
+            self.brain.load_state_dict(torch.load(path))
+        elif subject is not None:
+            self.brain.load_state_dict(subject.brain.state_dict())
+        else:
+            print("BrainError: No subject or path passed for brain probing, loading default brain")
+
         return
 
-    def train(self, state_sequence, win, discount_rate):
+    def save_brain(self, name='brain'):
+        torch.save(self.brain.state_dict(), name)
+        return
+
+    def train(self, state_sequence, move_sequence, win, discount_rate):
 
         discounted_weights = gm.discount_weights(len(state_sequence), discount_rate, win)
 
@@ -68,7 +85,11 @@ class MiniTTT:
             prediction = self.brain(board)
 
             # Creating y
-            chosen = torch.argmax(prediction)
+            # chosen = torch.argmax(prediction)
+            move = move_sequence[i]
+
+            chosen = move[0] * self.board_len + move[1]
+
             y = [chosen]
             y = torch.tensor(y)
 
