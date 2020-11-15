@@ -3,12 +3,12 @@ import environment as env
 import network
 
 # Hyperparameters
-game_count = 50000
+game_count = 35000
 board_len = 3
 games_per_update_opponent = 100
 games_per_render = 10000
 epsilon = 0.9
-epsilon_decay = 0.9997
+epsilon_decay = 0.9999
 
 
 training_environment = env.Environment(board_len)
